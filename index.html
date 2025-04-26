@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Health Information System</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background-color: #f2f7ff;
+      color: #333;
+      margin: 0;
+      padding: 40px;
+    }
+
+    h1 {
+      text-align: center;
+      color: #004aad;
+      margin-bottom: 40px;
+    }
+
+    h2 {
+      color: #004aad;
+      margin-top: 30px;
+    }
+
+    form {
+      background-color: #fff;
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+      max-width: 500px;
+      margin-bottom: 30px;
+    }
+
+    input {
+      width: 100%;
+      padding: 10px;
+      margin: 8px 0;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+    }
+
+    button {
+      background-color: #004aad;
+      color: white;
+      padding: 10px 20px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+    }
+
+    button:hover {
+      background-color: #0061d1;
+    }
+
+    #clientResponse, #programResponse, #enrollResponse, #searchResults {
+      margin-top: 10px;
+      background-color: #e0f0ff;
+      padding: 10px;
+      border-radius: 6px;
+      max-width: 500px;
+      white-space: pre-line;
+    }
+  </style>
+</head>
+<body>
+  <h1>Health Information System</h1>
+
+  <!-- Register Client Form -->
+  <h2>Register New Client</h2>
+  <form id="registerClientForm">
+    <input name="name" placeholder="Client Name" required />
+    <input name="age" type="number" placeholder="Age" required />
+    <button type="submit">Register Client</button>
+  </form>
+  <div id="clientResponse"></div>
+
+  <!-- Create Program Form -->
+  <h2>Create Health Program</h2>
+  <form id="createProgramForm">
+    <input name="name" placeholder="Program Name" required />
+    <button type="submit">Create Program</button>
+  </form>
+  <div id="programResponse"></div>
+
+  <!-- Enroll Client in Program -->
+  <h2>Enroll Client in Program</h2>
+  <form id="enrollClientForm">
+    <input name="clientId" placeholder="Client ID" required />
+    <input name="programIds" placeholder="Program ID(s) – comma separated" required />
+    <button type="submit">Enroll</button>
+  </form>
+  <div id="enrollResponse"></div>
+
+  <!-- Search Client by Name -->
+  <h2>Search Client</h2>
+  <form id="searchClientForm">
+    <input name="searchName" placeholder="Enter client name" required />
+    <button type="submit">Search</button>
+  </form>
+  <div id="searchResults"></div>
+
+  <script>
+    const apiBase = 'http://127.0.0.1:8000';
+
+    // Register client
+    document.getElementById('registerClientForm').onsubmit = async (e) => {
+      e.preventDefault();
+      const form = e.target;
+      const name = form.name.value;
+      const age = parseInt(form.age.value);
+
+      const res = await fetch(`${apiBase}/clients?name=${name}&age=${age}`, {
+        method: 'POST'
+      });
+      const data = await res.json();
+      document.getElementById('clientResponse').textContent = `Client Registered: ${data.name} (ID: ${data.id})`;
+    };
+
+    // Create program
+    document.getElementById('createProgramForm').onsubmit = async (e) => {
+      e.preventDefault();
+      const form = e.target;
+      const name = form.name.value;
+
+      const res = await fetch(`${apiBase}/programs?name=${name}`, {
+        method: 'POST'
+      });
+      const data = await res.json();
+      document.getElementById('programResponse').textContent = `Program Created: ${data.name} (ID: ${data.id})`;
+    };
+
+    // Enroll client in program
+    document.getElementById('enrollClientForm').onsubmit = async (e) => {
+      e.preventDefault();
+      const form = e.target;
+      const clientId = form.clientId.value.trim();
+      const programIds = form.programIds.value.split(',').map(p => p.trim());
+
+      const res = await fetch(`${apiBase}/clients/${clientId}/enroll`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(programIds)
+      });
+
+      if (res.status === 200) {
+        document.getElementById('enrollResponse').textContent = 'Client enrolled successfully!';
+      } else {
+        const err = await res.json();
+        document.getElementById('enrollResponse').textContent = `Error: ${err.detail}`;
+      }
+    };
+
+    // Search client by name
+    document.getElementById('searchClientForm').onsubmit = async (e) => {
+      e.preventDefault();
+      const form = e.target;
+      const name = form.searchName.value.trim();
+
+      const res = await fetch(`${apiBase}/clients?name=${encodeURIComponent(name)}`);
+      const data = await res.json();
+
+      if (data.length === 0) {
+        document.getElementById('searchResults').textContent = 'No clients found.';
+      } else {
+        const results = data.map(client =>
+          `Name: ${client.name}\nID: ${client.id}\nAge: ${client.age}\nPrograms: [${client.enrolled_programs.join(', ')}]`
+        ).join('\n\n');
+        document.getElementById('searchResults').textContent = results;
+      }
+    };
+  </script>
+</body>
+</html>
